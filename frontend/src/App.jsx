@@ -24,24 +24,36 @@ const App = () => {
       if (confirm(`Are you sure you want to update ${newName}'s number?`)) {
         const replaceId = contacts.find(contact => contact.name === newName).id
         Service.replaceContact(replaceId, { name: newName, number: newNumber })
-               .then((returnedContact) => {
-                                            setContacts(contacts.map(contact => contact.id === replaceId ? returnedContact : contact))
-                                            setMessage(`${newName}'s number successfully updated!`)
-                                            setTimeout(() => setMessage(''), 3000)
-                                          })
-               .catch(() => {
-                              setSuccess(false)
-                              setMessage(`${newName} has already been removed from the server.`)
-                              setContacts(contacts.filter(contact => contact.id !== replaceId))
-                              setTimeout(() => setMessage(''), 3000)
-                              setTimeout(() => setSuccess(true), 3000)
-               })
+                .then((returnedContact) => {
+                  setContacts(contacts.map(contact => contact.id === replaceId ? returnedContact : contact))
+                  setMessage(`${newName}'s number successfully updated!`)
+                  setTimeout(() => setMessage(''), 3000)
+                })
+                .catch(error => {
+                  console.log(error)
+                  setSuccess(false)
+                  setMessage(`${newName} has already been removed from the server.`)
+                  setContacts(contacts.filter(contact => contact.id !== replaceId))
+                  setTimeout(() => setMessage(''), 3000)
+                  setTimeout(() => setSuccess(true), 3000)
+                })
         return
       }
     }
     const newContact = { name: newName, number: newNumber }
     Service.addContact(newContact)
            .then(returnedContact => setContacts(contacts.concat(returnedContact)))
+           .catch(error => {
+              console.log(error)
+              setSuccess(false)
+              if (error.response.data.error) {
+                setMessage(error.response.data.error)
+              } else {
+                setMessage('An unknown error occurred')
+              }
+              setTimeout(() => setMessage(''), 3000)
+              setTimeout(() => setSuccess(true), 3000)
+           })
     setNewName('')
     setNewNumber('')
     setMessage(`${newName} successfully added!`)
@@ -49,11 +61,18 @@ const App = () => {
   }
 
   const deleteContact = (id) => {
-    if (confirm(`Are you sure you want to delete ${contacts.find(contact => contact.id === id).name}?`)) {
+    const contactName = contacts.find(contact => contact.id === id).name
+    if (confirm(`Are you sure you want to delete ${contactName}?`)) {
       Service.deleteContact(id)
-             .then(setContacts(contacts.filter(contact => contact.id !== id)))
+        .then(() => {
+          setContacts(contacts.filter(contact => contact.id !== id))
+          setMessage(`${contactName} successfully removed from phonebook!`)
+          setTimeout(() => setMessage(''), 3000)
+          setTimeout(() => setSuccess(true), 3000)
+        })
     }
   }
+  
 
   const handleNameChange = (event) => setNewName(event.target.value)
   const handleNumberChange = (event) => setNewNumber(event.target.value)
@@ -66,10 +85,11 @@ const App = () => {
       <Search handleSearch={handleSearchChange}/>
       <form onSubmit={addContact}>
         <Add name={newName} handleName={handleNameChange} number={newNumber} handleNumber={handleNumberChange}/>
-        <Display contacts={contacts} search={search} deleteContact={deleteContact}/>
       </form>
+      <Display contacts={contacts} search={search} deleteContact={deleteContact}/>
     </div>
   )
 }
 
 export default App
+
